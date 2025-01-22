@@ -1,4 +1,6 @@
-import * as glUtils from './webgl-utils'
+import * as utils from './resources/webgl-utils';
+import * as m3 from './resources/m3';
+import * as ui from './resources/webgl-lessons-ui';
 
 import { vs, fs } from './hello';
 
@@ -23,24 +25,36 @@ export class App {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
 
+        const uiContainer = document.createElement('div');
+        uiContainer.setAttribute('id', 'uiContainer');
+        this.container.appendChild(uiContainer);
+        uiContainer.innerHTML = `<div id="ui">
+                <div id="x"></div>
+                <div id="y"></div>
+                <div id="angle"></div>
+                <div id="scaleX"></div>
+                <div id="scaleY"></div>
+            </div>`;
+
         const gl = canvas.getContext('webgl2');
         if (!gl) {
             throw new Error('WebGL2 not supported');
         }
 
-        const program = glUtils.createProgramFromSources(gl, vs, fs);
+        const program = utils.createProgramFromSources(gl, [vs, fs]);
 
-        const positionAttrLoc = gl.getAttribLocation(program, 'a_position');
-        const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
-        const colorLocation = gl.getUniformLocation(program, 'u_color');
-
-        const positionBuffer = gl.createBuffer();
-
+        const positionLocation = gl.getAttribLocation(program, 'a_position');
+        const matrixLocation = gl.getUniformLocation(program, 'u_matrix');
 
         const vao = gl.createVertexArray();
         gl.bindVertexArray(vao);
-        gl.enableVertexAttribArray(positionAttrLoc);
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+        this.setGeometry(gl);
+
+        gl.enableVertexAttribArray(positionLocation);
 
         const size = 2;
         const type = gl.FLOAT;
@@ -48,7 +62,7 @@ export class App {
         const stride = 0;
         const offset = 0;
         gl.vertexAttribPointer(
-            positionAttrLoc,
+            positionLocation,
             size,
             type,
             normalize,
@@ -56,64 +70,75 @@ export class App {
             offset
         );
 
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        const translation = [200, 150];
+        let angleInRadians = 0;
+        const scale = [1, 1];
 
-        gl.useProgram(program);
-        gl.bindVertexArray(vao);
-        gl.uniform2f(
-            resolutionUniformLocation,
-            gl.canvas.width,
-            gl.canvas.height
-        );
+        drawScene();
 
-        for (let i = 0; i < 50; ++i) {
-            this.setRectangle(
-                gl,
-                this.randomInt(300),
-                this.randomInt(300),
-                this.randomInt(300),
-                this.randomInt(300)
+        ui.setupSlider('#x', { value: translation[0], slide: updatePosition(0), max: gl.canvas.width });
+        ui.setupSlider('#y', { value: translation[1], slide: updatePosition(1), max: gl.canvas.height });
+        ui.setupSlider('#angle',  { slide: updateAngle, max: 360});
+        ui.setupSlider('#scaleX', { value: scale[0], slide: updateScale(0), min: -5, max: 5, step: 0.01, precision: 2 });
+        ui.setupSlider('#scaleY', { value: scale[1], slide: updateScale(1), min: -5, max: 5, step: 0.01, precision: 2 });
+
+        function updatePosition(index: number) {
+            return function (evt: Event, ui: { value: number; }) {
+                translation[index] = ui.value;
+                drawScene();
+            };
+        }
+
+        function updateAngle(event: Event, ui: { value: number; }): void {
+            const angleInDegrees = 360 - ui.value;
+            angleInRadians = angleInDegrees * Math.PI / 180;
+            drawScene();
+        }
+
+        function updateScale(index: number) {
+            return function (event: Event, ui: { value: number; }) {
+                scale[index] = ui.value;
+                drawScene();
+            };
+        }
+
+        function drawScene(): void {
+            if (!gl) {
+                return;
+            }
+            const canvas = gl.canvas as HTMLCanvasElement;
+            utils.resizeCanvasToDisplaySize(canvas);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            let matrix = m3.projection(
+                canvas.clientWidth,
+                canvas.clientHeight
             );
-            gl.uniform4f(
-                colorLocation,
-                Math.random(),
-                Math.random(),
-                Math.random(),
-                1
-            );
-            const primitiveType = gl.TRIANGLES;
+            matrix = m3.translate(matrix, translation[0], translation[1]);
+            matrix = m3.rotate(matrix, angleInRadians);
+            matrix = m3.scale(matrix, scale[0], scale[1]);
+
+            gl.useProgram(program);
+            gl.bindVertexArray(vao);
+            gl.uniformMatrix3fv(matrixLocation, false, matrix);
+
             const offset = 0;
-            const count = 6;
-            gl.drawArrays(primitiveType, offset, count);
+            const count = 3;
+            gl.drawArrays(gl.TRIANGLES, offset, count);
+
         }
     }
 
-    private randomInt(range: number): number {
-        return Math.floor(Math.random() * range);
-    }
-
-    private setRectangle(
-        gl: WebGL2RenderingContext,
-        x: number,
-        y: number,
-        width: number,
-        height: number
-    ): void {
-        const x1 = x;
-        const x2 = x + width;
-        const y1 = y;
-        const y2 = y + height;
+    private setGeometry(gl: WebGL2RenderingContext): void {
         gl.bufferData(
             gl.ARRAY_BUFFER,
             new Float32Array([
-                x1, y1,
-                x2, y1,
-                x1, y2,
-                x1, y2,
-                x2, y1,
-                x2, y2,
+                0, -100,
+                150, 125,
+                -175, 100,
             ]),
             gl.STATIC_DRAW
         );
