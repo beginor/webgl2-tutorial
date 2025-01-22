@@ -53,3 +53,17 @@ export function createProgram(
     gl.deleteProgram(program);
     throw new Error('linkProgram failed');
 }
+
+export function createProgramFromSources(
+    gl: WebGL2RenderingContext,
+    vertexShaderSource: string,
+    fragmentShaderSource: string
+): WebGLProgram {
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    const fragmentShader = createShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        fragmentShaderSource
+    );
+    return createProgram(gl, vertexShader, fragmentShader);
+}

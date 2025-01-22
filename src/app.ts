@@ -28,17 +28,18 @@ export class App {
             throw new Error('WebGL2 not supported');
         }
 
-        const vertexShader = glUtils.createShader(gl, gl.VERTEX_SHADER, vs);
-        const fragmentShader = glUtils.createShader(gl, gl.FRAGMENT_SHADER, fs);
-        const program = glUtils.createProgram(gl, vertexShader, fragmentShader);
+        const program = glUtils.createProgramFromSources(gl, vs, fs);
 
         const positionAttrLoc = gl.getAttribLocation(program, 'a_position');
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         const positions = [
-            0, 0,
-            0, 0.5,
-            0.7, 0,
+            10, 20,
+            80, 20,
+            10, 30,
+            10, 30,
+            80, 20,
+            80, 30,
         ];
         gl.bufferData(
             gl.ARRAY_BUFFER,
@@ -49,6 +50,8 @@ export class App {
         const vao = gl.createVertexArray();
         gl.bindVertexArray(vao);
         gl.enableVertexAttribArray(positionAttrLoc);
+
+        const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
 
         const size = 2;
         const type = gl.FLOAT;
@@ -70,9 +73,14 @@ export class App {
 
         gl.useProgram(program);
         gl.bindVertexArray(vao);
+        gl.uniform2f(
+            resolutionUniformLocation,
+            gl.canvas.width,
+            gl.canvas.height
+        );
 
         const primitiveType = gl.TRIANGLES;
-        const count = 3;
+        const count = 6;
         gl.drawArrays(primitiveType, offset, count);
     }
 
