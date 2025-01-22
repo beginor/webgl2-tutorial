@@ -78,8 +78,8 @@ export class App {
         setColors(gl);
         gl.enableVertexAttribArray(colorLocation);
         const colorSize = 4;
-        const colorType = gl.FLOAT;
-        const colorNormalize = false;
+        const colorType = gl.UNSIGNED_BYTE;
+        const colorNormalize = true;
         const colorStride = 0;
         const colorOffset = 0;
         gl.vertexAttribPointer(
@@ -168,15 +168,16 @@ export class App {
         }
 
         function setColors(gl: WebGL2RenderingContext): void {
+            const random = Math.random;
             gl.bufferData(
                 gl.ARRAY_BUFFER,
-                new Float32Array([
-                    Math.random(), Math.random(), Math.random(), 1,
-                    Math.random(), Math.random(), Math.random(), 1,
-                    Math.random(), Math.random(), Math.random(), 1,
-                    Math.random(), Math.random(), Math.random(), 1,
-                    Math.random(), Math.random(), Math.random(), 1,
-                    Math.random(), Math.random(), Math.random(), 1,
+                new Uint8Array([
+                    random() * 255, random() * 255, random() * 255, 255,
+                    random() * 255, random() * 255, random() * 255, 255,
+                    random() * 255, random() * 255, random() * 255, 255,
+                    random() * 255, random() * 255, random() * 255, 255,
+                    random() * 255, random() * 255, random() * 255, 255,
+                    random() * 255, random() * 255, random() * 255, 255,
                 ]),
                 gl.STATIC_DRAW
             );
